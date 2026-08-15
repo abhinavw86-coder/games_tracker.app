@@ -13,7 +13,7 @@ from urllib.error import URLError
 from urllib.request import urlopen
 
 APP_NAME = "Tournament Tracker"
-DEFAULT_URL = "http://raspberrypi.local/tournaments.json"
+DEFAULT_URL = "http://pi-bookworm.local/tournaments.json"
 SPORTS = {"chess": "Chess", "table_tennis": "Table Tennis"}
 TIME_CONTROLS = ["classical", "rapid", "blitz", "bullet"]
 FILTER_SORTS = {"Start date": "start_date", "Distance": "distance_km"}
