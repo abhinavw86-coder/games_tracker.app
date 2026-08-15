@@ -1,0 +1,9 @@
+[Unit]
+Description=Tournament Tracker feed builder
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/tracker
+ExecStart=/opt/tracker/.venv/bin/python build_json.py --output /var/www/tracker/tournaments.json

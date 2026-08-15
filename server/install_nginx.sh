@@ -28,9 +28,13 @@ echo "==> Testing and reloading nginx"
 pkexec nginx -t
 pkexec systemctl reload nginx
 
-echo "==> Scheduling nightly refresh at 05:00"
-pkexec bash -c "printf '0 5 * * * root cd /opt/tracker && .venv/bin/python build_json.py --output /var/www/tracker/tournaments.json\n' > /etc/cron.d/tracker"
-pkexec systemctl enable --now cron 2>/dev/null || true
+echo "==> Setting up systemd timer (boot + daily 05:00 refresh)"
+pkexec cp "$SERVER_DIR/tracker.service" /etc/systemd/system/tracker.service
+pkexec cp "$SERVER_DIR/tracker.timer" /etc/systemd/system/tracker.timer
+pkexec rm -f /etc/cron.d/tracker
+pkexec systemctl daemon-reload
+pkexec systemctl enable --now tracker.timer
+pkexec systemctl start tracker.service
 
 echo
 echo "Done. The feed is at:"

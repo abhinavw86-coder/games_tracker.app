@@ -1,0 +1,10 @@
+[Unit]
+Description=Refresh tournament feed daily
+
+[Timer]
+OnBootSec=2min
+OnCalendar=*-*-* 05:00:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target
