@@ -1,6 +1,6 @@
-"""Tournament Tracker — shows chess & table-tennis tournaments served by the
-Raspberry Pi (nginx). Uses only the Python standard library so it bundles
-cleanly with PyInstaller."""
+"""Tournament Tracker — shows chess tournaments served by the Raspberry Pi
+(nginx). Uses only the Python standard library so it bundles cleanly with
+PyInstaller."""
 
 import json
 import os
