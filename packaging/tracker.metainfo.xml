@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.abhinavw86-coder.tracker</id>
+  <name>Tournament Tracker</name>
+  <summary>Chess tournaments near you (FIDE &amp; non-FIDE)</summary>
+  <metadata_license>MIT</metadata_license>
+  <project_license>MIT</project_license>
+  <description>
+    <p>
+      A desktop app that lists upcoming FIDE and non-FIDE chess tournaments
+      near your area, served as JSON from a Raspberry Pi. Filter by FIDE
+      status, time control, and distance.
+    </p>
+  </description>
+  <launchable type="desktop-file">tracker.desktop</launchable>
+  <icon type="stock">tracker</icon>
+  <categories>
+    <category>Game</category>
+  </categories>
+</component>

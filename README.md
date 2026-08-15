@@ -1,9 +1,9 @@
 # Tournament Tracker
 
-A macOS app that lists upcoming **chess** tournaments near a chosen location.
-A Raspberry Pi scrapes tournaments from two public sources and serves them as
-JSON over nginx; the app fetches that JSON and shows everything: date, venue,
-distance, FIDE / non-FIDE status, and time control (classical / rapid /
+A macOS + Linux app that lists upcoming **chess** tournaments near a chosen
+location. A Raspberry Pi scrapes tournaments from two public sources and serves
+them as JSON over nginx; the app fetches that JSON and shows everything: date,
+venue, distance, FIDE / non-FIDE status, and time control (classical / rapid /
 blitz / bullet).
 
 ```
@@ -31,11 +31,15 @@ server/                  Raspberry Pi side
   tracker.service        systemd unit: builds the feed (runs on boot)
   tracker.timer          systemd timer: daily refresh at 05:00
   install_nginx.sh       one-shot Pi setup (pkexec, apt)
-tracker/app.py           macOS Tkinter app (stdlib only)
+tracker/app.py           Tkinter app (stdlib only)
 run.py                   app entry point
 sample.json              example feed for testing without the Pi
+packaging/tracker.metainfo.xml   AppStream metadata for Linux packages
+scripts/make_icon.py     generates the app icon (PNGs) into scripts/icons/
 scripts/build_macos.sh   PyInstaller → .app → .dmg
+scripts/build_linux.sh   PyInstaller → .deb + AppImage (amd64 / arm64)
 .github/workflows/build-macos.yml   free macOS build via GitHub Actions
+.github/workflows/build-linux.yml   free Linux build via GitHub Actions
 ```
 
 ## 1. Set up the Raspberry Pi (one time)
@@ -94,7 +98,7 @@ via Rosetta 2.
 ./scripts/build_macos.sh 1.0.0   # needs Python 3.8+ and PyInstaller
 ```
 
-## 3. Install and use tracker.app
+## 3. Install and use the app (macOS)
 
 1. Open the DMG, drag `tracker.app` into **Applications**.
 2. Right-click → Open the first time (it's unsigned, so Gatekeeper will warn).
@@ -104,6 +108,33 @@ via Rosetta 2.
 5. "Load sample" shows bundled example data so you can try it before the Pi is up.
 
 The URL is remembered between launches.
+
+## 4. Linux packages (.deb and AppImage)
+
+The same app is packaged for Linux by `scripts/build_linux.sh` (amd64 and arm64),
+driven by `.github/workflows/build-linux.yml` on GitHub Actions — **run it on the
+same architecture as your target** (the workflow builds both).
+
+1. Go to **Actions → Build Linux (.deb + AppImage) → Run workflow**, or push a tag.
+2. Download the artifacts:
+   - `tracker-deb-amd64` / `tracker-deb-arm64` → `tracker_<version>_<arch>.deb`
+   - `tracker-appimage-amd64` / `tracker-appimage-arm64` → `tracker-<version>-<arch>.AppImage`
+
+Install the `.deb` on Debian/Ubuntu (arm64 on the Pi itself, amd64 on an Intel
+machine):
+
+```bash
+sudo apt install ./tracker_1.0.0_arm64.deb
+```
+
+The **AppImage** is portable: `chmod +x tracker-*.AppImage && ./tracker-*.AppImage`
+— it runs on any glibc-based distro of the same architecture without installing.
+
+### Build on your own machine
+
+```bash
+./scripts/build_linux.sh 1.0.0   # needs python3-venv; produces dist/*.deb + dist/*.AppImage
+```
 
 ## JSON schema (what the Pi serves)
 
