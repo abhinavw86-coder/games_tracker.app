@@ -11,7 +11,7 @@ import time
 import requests
 
 CACHE_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".geocode_cache.json")
-USER_AGENT = "TournamentTracker-Pi/1.0 (personal tournament feed)"
+USER_AGENT = "TournamentTracker-Pi/1.0"
 MIN_INTERVAL = 1.1
 
 

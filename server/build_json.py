@@ -13,8 +13,9 @@ from geocode import Geocoder
 from scrape_chess import scrape as scrape_chess
 from scrape_ttfi import scrape as scrape_ttfi
 
-# Home is hardcoded to Sarjapur, Bengaluru.
-HOME = {"label": "Sarjapur, Bengaluru", "lat": 12.8620, "lng": 77.7860}
+# Tournaments are filtered by distance from a home location. Set these to
+# your own area before deploying (e.g. your city or suburb).
+HOME = {"label": "Bengaluru, India", "lat": 12.9716, "lng": 77.5946}
 
 # Only keep tournaments within this many km of home.
 RADIUS_KM = 200.0

@@ -1,9 +1,9 @@
-# Tournament Tracker (tracker.app)
+# Tournament Tracker
 
-A macOS app for your brother that lists upcoming **chess** and **table tennis**
-tournaments near **Sarjapur, Bengaluru**. A Raspberry Pi scrapes the tournaments
-from two sites and serves them as JSON over nginx; the Mac app polls that JSON
-and shows everything: date, sport, location, distance, FIDE / non-FIDE, and time
+A macOS app that lists upcoming **chess** and **table tennis** tournaments near
+a chosen location. A Raspberry Pi scrapes tournaments from two public sources
+and serves them as JSON over nginx; the app fetches that JSON and shows
+everything: date, sport, location, distance, FIDE / non-FIDE status, and time
 control (classical / rapid / blitz / bullet).
 
 ```
@@ -14,8 +14,8 @@ TTFI (table tennis) ─┘
 
 - Chess source: **AICF All-Events** — `https://aicf.in/all-events/`
 - Table tennis source: **TTFI Events** — `https://www.ttfi.org/events`
-- Home is hardcoded to **Sarjapur, Bengaluru** (12.8620, 77.7860) with a 200 km radius
-  (change `HOME` / `RADIUS_KM` at the top of `server/build_json.py`).
+- Home location and search radius are constants in `server/build_json.py`
+  (defaults to Bengaluru, India with a 200 km radius).
 
 ## Layout
 
@@ -31,7 +31,7 @@ server/                  Raspberry Pi side
   install_nginx.sh       one-shot Pi setup (pkexec, apt)
 tracker/app.py           macOS Tkinter app (stdlib only)
 run.py                   app entry point
-sample.json              fake feed for testing without the Pi
+sample.json              example feed for testing without the Pi
 scripts/build_macos.sh   PyInstaller → .app → .dmg
 .github/workflows/build-macos.yml   free macOS build via GitHub Actions
 ```
@@ -49,16 +49,16 @@ This installs nginx, copies the server to `/opt/tracker`, builds the feed into
 `/var/www/tracker/tournaments.json`, reloads nginx, and sets up a **systemd
 timer** that runs the feed build at boot and every day at 05:00.
 
-Note the printed URL, e.g. `http://192.168.1.50/tournaments.json` (or
-`http://raspberrypi.local/tournaments.json` if your router does mDNS).
+Note the printed URL, e.g. `http://192.168.1.50/tournaments.json` (or a
+`*.local` hostname if your router does mDNS).
 
-### Is nginx the best webserver?
+### Why nginx?
 
-Yes, for this job: a tiny static file served once a day. Alternatives: **Caddy**
-(automatic HTTPS, single binary — nicer if you ever want it public), **lighttpd**
-(even lighter), Python's `http.server` (dev only — do not use on a real Pi).
+This serves one small JSON file once a day, so any static webserver works.
+nginx is fast and tiny. Alternatives: **Caddy** (automatic HTTPS), **lighttpd**
+(even lighter), Python's `http.server` (dev only).
 
-### Rebuild the feed by hand (e.g. to test)
+### Rebuild the feed by hand
 
 ```bash
 cd /opt/tracker
@@ -69,32 +69,37 @@ The first run geocodes every city via OpenStreetMap (≈1 req/s, takes a few
 minutes). Results are cached in `server/.geocode_cache.json`, so later runs are
 fast and offline. Cities that can't be geocoded are skipped.
 
+### Configure the home location
+
+Edit `HOME` in `server/build_json.py` — it needs `label`, `lat`, and `lng`.
+Tournaments farther than `RADIUS_KM` from it are filtered out.
+
 ## 2. Build the Mac app (.dmg)
 
-### Easiest: free GitHub Actions build
+### Free GitHub Actions build
 
-1. Push this folder to a GitHub repo (it must include the `.github/workflows` folder).
-2. Go to **Actions → Build macOS DMG → Run workflow**, or push a tag `git tag v1.0.0 && git push --tags`.
-3. Download **tracker-dmg** from the run's Artifacts. It contains `tracker-1.0.0-macos.dmg`.
+1. Push this repository to GitHub (must include the `.github/workflows` folder).
+2. Go to **Actions → Build macOS DMG → Run workflow**, or push a tag (`git tag v1.0.0 && git push --tags`).
+3. Download the **tracker-dmg** artifact from the run. It contains `tracker-1.0.0-macos.dmg`.
 
-The workflow runs on an **Intel macOS 13** runner, so the app runs natively on
-macOS 12 Intel Macs and via Rosetta 2 on Apple Silicon.
+The workflow runs on an **Intel macOS 15 runner** (`macos-15-intel`), so the app
+is x86_64: native on Intel Macs (including macOS 12) and runs on Apple Silicon
+via Rosetta 2.
 
 ### Or build on a Mac
 
 ```bash
-brew install python@3.12   # or use any Python 3.8+
-./scripts/build_macos.sh 1.0.0   # needs Xcode CLT for PyInstaller
+./scripts/build_macos.sh 1.0.0   # needs Python 3.8+ and PyInstaller
 ```
 
 ## 3. Install and use tracker.app
 
 1. Open the DMG, drag `tracker.app` into **Applications**.
-2. Right-click → Open the first time (it's not signed, so Gatekeeper will warn).
+2. Right-click → Open the first time (it's unsigned, so Gatekeeper will warn).
 3. Enter the Pi's URL in the **Server URL** box and press **Refresh**.
 4. Filter by **Sport**, **FIDE**, **Time control**, and **Sort by** date or distance.
    Double-click any row for full details (dates, distance, source, link).
-5. "Load sample" shows built-in example data so you can try it before the Pi is up.
+5. "Load sample" shows bundled example data so you can try it before the Pi is up.
 
 The URL is remembered between launches.
 
@@ -102,8 +107,8 @@ The URL is remembered between launches.
 
 ```json
 {
-  "generated_at": "2026-08-14T21:00:00+05:30",
-  "home": { "label": "Sarjapur, Bengaluru", "lat": 12.862, "lng": 77.786 },
+  "generated_at": "2026-08-15T05:00:00+05:30",
+  "home": { "label": "Bengaluru, India", "lat": 12.9716, "lng": 77.5946 },
   "radius_km": 200.0,
   "tournaments": [
     {
@@ -126,11 +131,11 @@ The URL is remembered between launches.
 
 ## Troubleshooting
 
-- **App says it can't reach the Pi**: try the Pi's raw IP instead of
-  `raspberrypi.local` (many routers don't support mDNS), and check nginx on the
+- **App says it can't reach the Pi**: try the Pi's raw IP instead of the
+  `*.local` hostname (many routers don't support mDNS), and check nginx on the
   Pi with `systemctl status nginx`.
-- **No table tennis events**: TTFI's page only lists a handful of upcoming events
-  with dates; that's normal.
+- **No table tennis events**: TTFI's page only lists a handful of upcoming
+  events with dates; that's normal.
 - **AICF table has typos**: the scraper auto-corrects swapped/typo dates
   (see `normalize_dates` in `server/scrape_chess.py`).
 - **App won't open on macOS**: it's unsigned — right-click → Open → Open.

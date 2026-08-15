@@ -275,12 +275,13 @@ class TrackerApp:
         if not match:
             return
         t = match[0]
+        home_label = self.feed_meta.get("home", {}).get("label", "home")
         details = (
             f"{t.get('name', '?')}\n\n"
             f"Sport:        {SPORTS.get(t.get('sport', ''), '?')}\n"
             f"Dates:        {t.get('start_date')} → {t.get('end_date') or 'TBC'}\n"
             f"Location:     {t.get('location', '?')}\n"
-            f"Distance:     {t.get('distance_km')} km from Sarjapur, Bengaluru\n"
+            f"Distance:     {t.get('distance_km')} km from {home_label}\n"
             f"FIDE rated:   {t.get('fide_rated')}\n"
             f"Time control: {t.get('time_control')}\n"
             f"Type:         {t.get('category')}\n"
