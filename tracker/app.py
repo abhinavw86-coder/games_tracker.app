@@ -14,7 +14,7 @@ from urllib.request import urlopen
 
 APP_NAME = "Tournament Tracker"
 DEFAULT_URL = "http://pi-bookworm.local/tournaments.json"
-SPORTS = {"chess": "Chess", "table_tennis": "Table Tennis"}
+SPORTS = {"chess": "Chess"}
 TIME_CONTROLS = ["classical", "rapid", "blitz", "bullet"]
 FILTER_SORTS = {"Start date": "start_date", "Distance": "distance_km"}
 
@@ -104,7 +104,7 @@ class TrackerApp:
         filters.pack(fill="x")
         self._filter_row(
             filters, "Sport", self.sport_var,
-            ["All", "Chess", "Table Tennis"],
+            ["All", "Chess"],
         )
         self._filter_row(
             filters, "FIDE", self.fide_var,

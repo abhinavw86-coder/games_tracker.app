@@ -40,4 +40,4 @@ echo
 echo "Done. The feed is at:"
 IP=$(hostname -I | awk '{print $1}')
 echo "  http://$IP/tournaments.json"
-echo "Put this URL into the Mac app (default is http://raspberrypi.local/tournaments.json)."
+echo "Put this URL into the Mac app (default is http://pi-bookworm.local/tournaments.json)."

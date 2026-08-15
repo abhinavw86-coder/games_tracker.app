@@ -5,7 +5,7 @@
     "lat": 12.9716,
     "lng": 77.5946
   },
-  "radius_km": 200.0,
+  "radius_km": 35.0,
   "tournaments": [
     {
       "id": "aicf-479936",
@@ -102,54 +102,6 @@
       "lat": 12.915,
       "lng": 77.683,
       "distance_km": 11.0
-    },
-    {
-      "id": "ttfi-1",
-      "sport": "table_tennis",
-      "name": "UTT National Ranking Table Tennis Championships 2026",
-      "start_date": "2026-08-16",
-      "end_date": "2026-08-23",
-      "location": "Kanpur",
-      "fide_rated": null,
-      "time_control": null,
-      "category": "National Ranking",
-      "link": "https://www.ttfi.org/events",
-      "source": "TTFI",
-      "lat": 26.44992,
-      "lng": 80.33187,
-      "distance_km": 1560.0
-    },
-    {
-      "id": "ttfi-2",
-      "sport": "table_tennis",
-      "name": "22nd Commonwealth Table Tennis Championship 2026",
-      "start_date": "2026-08-27",
-      "end_date": "2026-09-02",
-      "location": "New Delhi",
-      "fide_rated": null,
-      "time_control": null,
-      "category": "Championship",
-      "link": "https://www.ttfi.org/events",
-      "source": "TTFI",
-      "lat": 28.61394,
-      "lng": 77.20902,
-      "distance_km": 1740.0
-    },
-    {
-      "id": "ttfi-3",
-      "sport": "table_tennis",
-      "name": "Karnataka State Table Tennis Ranking Tournament",
-      "start_date": "2026-09-12",
-      "end_date": "2026-09-14",
-      "location": "Bengaluru",
-      "fide_rated": null,
-      "time_control": null,
-      "category": "National Ranking",
-      "link": "https://www.ttfi.org/events",
-      "source": "TTFI",
-      "lat": 12.9716,
-      "lng": 77.5946,
-      "distance_km": 22.0
     }
   ]
 }

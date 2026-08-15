@@ -1,28 +1,30 @@
 # Tournament Tracker
 
-A macOS app that lists upcoming **chess** and **table tennis** tournaments near
-a chosen location. A Raspberry Pi scrapes tournaments from two public sources
-and serves them as JSON over nginx; the app fetches that JSON and shows
-everything: date, sport, location, distance, FIDE / non-FIDE status, and time
-control (classical / rapid / blitz / bullet).
+A macOS app that lists upcoming **chess** tournaments near a chosen location.
+A Raspberry Pi scrapes tournaments from two public sources and serves them as
+JSON over nginx; the app fetches that JSON and shows everything: date, venue,
+distance, FIDE / non-FIDE status, and time control (classical / rapid /
+blitz / bullet).
 
 ```
-AICF (chess) ──┐
-               ├─► server/build_json.py ─► tournaments.json ─► nginx ─► tracker.app (macOS 12+)
-TTFI (table tennis) ─┘
+AICF (all-India official) ──┐
+                            ├─► server/build_json.py ─► tournaments.json ─► nginx ─► tracker.app (macOS 12+)
+Chessfee (registration portal) ─┘
 ```
 
-- Chess source: **AICF All-Events** — `https://aicf.in/all-events/`
-- Table tennis source: **TTFI Events** — `https://www.ttfi.org/events`
+- Chess source 1: **AICF All-Events** — `https://aicf.in/all-events/`
+  (official, FIDE-rated events)
+- Chess source 2: **Chessfee** — `https://www.chessfee.com/tournament_ongoing.php`
+  (casual opens and children's tournaments, FIDE and non-FIDE)
 - Home location and search radius are constants in `server/build_json.py`
-  (defaults to Bengaluru, India with a 200 km radius).
+  (defaults to Bengaluru, India with a 35 km radius).
 
 ## Layout
 
 ```
 server/                  Raspberry Pi side
   scrape_chess.py        AICF chess scraper
-  scrape_ttfi.py         TTFI table tennis scraper
+  scrape_chessfee.py     Chessfee chess scraper (casual/children's events)
   build_json.py          merge + geocode + distance filter → tournaments.json
   geocode.py             OpenStreetMap Nominatim geocoder (cached)
   nginx.conf             nginx site config for the JSON feed
@@ -109,21 +111,21 @@ The URL is remembered between launches.
 {
   "generated_at": "2026-08-15T05:00:00+05:30",
   "home": { "label": "Bengaluru, India", "lat": 12.9716, "lng": 77.5946 },
-  "radius_km": 200.0,
+  "radius_km": 35.0,
   "tournaments": [
     {
       "id": "aicf-479936",
-      "sport": "chess",                 // "chess" | "table_tennis"
+      "sport": "chess",
       "name": "6th Check n Mate All India Open FIDE Rated Rapid Chess Tournament",
       "start_date": "2026-08-15",
       "end_date": "2026-08-15",
       "location": "Bengaluru",
       "distance_km": 24.8,
-      "fide_rated": true,                // chess: true/false, table tennis: null
-      "time_control": "rapid",           // chess: classical/rapid/blitz/bullet, tt: null
+      "fide_rated": true,
+      "time_control": "rapid",           // classical | rapid | blitz | bullet
       "category": "Open",
       "link": "https://aicf.in/all-events/",
-      "source": "AICF"
+      "source": "AICF"                    // "AICF" | "Chessfee"
     }
   ]
 }
@@ -134,8 +136,10 @@ The URL is remembered between launches.
 - **App says it can't reach the Pi**: try the Pi's raw IP instead of the
   `*.local` hostname (many routers don't support mDNS), and check nginx on the
   Pi with `systemctl status nginx`.
-- **No table tennis events**: TTFI's page only lists a handful of upcoming
-  events with dates; that's normal.
+- **No tournaments near me**: the 35 km radius filters out everything farther
+  away. Raise `RADIUS_KM` in `server/build_json.py` (e.g. 60) to widen it.
+- **Chessfee list is empty some weeks**: it's driven by what organizers publish;
+  most of its events are in Tamil Nadu, so Bangalore ones appear intermittently.
 - **AICF table has typos**: the scraper auto-corrects swapped/typo dates
   (see `normalize_dates` in `server/scrape_chess.py`).
 - **App won't open on macOS**: it's unsigned — right-click → Open → Open.

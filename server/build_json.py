@@ -11,7 +11,7 @@ from datetime import datetime, timezone, timedelta
 
 from geocode import Geocoder
 from scrape_chess import scrape as scrape_chess
-from scrape_ttfi import scrape as scrape_ttfi
+from scrape_chessfee import scrape as scrape_chessfee
 
 # Tournaments are filtered by distance from a home location. Set these to
 # your own area before deploying (e.g. your city or suburb).
@@ -35,14 +35,14 @@ def haversine_km(lat1, lng1, lat2, lng2):
 def main():
     parser = argparse.ArgumentParser(description="Build tournaments.json")
     parser.add_argument("--output", default="tournaments.json", help="output file (default: tournaments.json)")
-    parser.add_argument("--skip-ttfi", action="store_true", help="skip the TTFI scrape")
+    parser.add_argument("--skip-chessfee", action="store_true", help="skip the Chessfee scrape")
     args = parser.parse_args()
 
     print("Scraping chess (AICF) ...")
     events = scrape_chess()
-    if not args.skip_ttfi:
-        print("Scraping table tennis (TTFI) ...")
-        events += scrape_ttfi()
+    if not args.skip_chessfee:
+        print("Scraping chess (Chessfee) ...")
+        events += scrape_chessfee()
 
     geocoder = Geocoder()
     kept = 0
