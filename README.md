@@ -1,10 +1,10 @@
 # Tournament Tracker
 
-A macOS + Linux app that lists upcoming **chess** tournaments near a chosen
-location. A Raspberry Pi scrapes tournaments from two public sources and serves
-them as JSON over nginx; the app fetches that JSON and shows everything: date,
-venue, distance, FIDE / non-FIDE status, and time control (classical / rapid /
-blitz / bullet).
+A macOS + Windows + Linux app that lists upcoming **chess** tournaments near a
+chosen location. A Raspberry Pi scrapes tournaments from two public sources and
+serves them as JSON over nginx; the app fetches that JSON and shows everything:
+date, venue, distance, FIDE / non-FIDE status, and time control (classical /
+rapid / blitz / bullet).
 
 ```
 AICF (all-India official) ──┐
@@ -38,8 +38,10 @@ packaging/tracker.metainfo.xml   AppStream metadata for Linux packages
 scripts/make_icon.py     generates the app icon (PNGs) into scripts/icons/
 scripts/build_macos.sh   PyInstaller → .app → .dmg
 scripts/build_linux.sh   PyInstaller → .deb + AppImage (amd64 / arm64)
+scripts/build_windows.ps1  PyInstaller → .exe bundle → .zip (x86_64)
 .github/workflows/build-macos.yml   free macOS build via GitHub Actions
 .github/workflows/build-linux.yml   free Linux build via GitHub Actions
+.github/workflows/build-windows.yml   free Windows build via GitHub Actions
 ```
 
 ## 1. Set up the Raspberry Pi (one time)
@@ -134,6 +136,23 @@ The **AppImage** is portable: `chmod +x tracker-*.AppImage && ./tracker-*.AppIma
 
 ```bash
 ./scripts/build_linux.sh 1.0.0   # needs python3-venv; produces dist/*.deb + dist/*.AppImage
+```
+
+## 5. Windows package (.zip, x86_64)
+
+Built by `.github/workflows/build-windows.yml` on a **Windows x86_64** runner
+(GitHub only offers 64-bit Windows runners; 32-bit Windows is effectively
+extinct, so "x86" = x86_64 here).
+
+1. Go to **Actions → Build Windows → Run workflow**, or push a tag.
+2. Download the **tracker-windows-x86_64** artifact → `tracker-<version>-windows-x86_64.zip`.
+3. Extract it and double-click `tracker\tracker.exe` — no installation needed
+   (the exe, its bundled Python, and Tcl/Tk live in the same folder).
+
+### Build on your own Windows machine
+
+```powershell
+.\scripts\build_windows.ps1 1.0.0   # needs Python 3.8+ and PyInstaller
 ```
 
 ## JSON schema (what the Pi serves)

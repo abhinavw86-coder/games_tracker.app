@@ -64,10 +64,20 @@ def draw_icon(size):
 
 def main():
     os.makedirs(OUT_DIR, exist_ok=True)
+    images = {}
     for size in SIZES:
+        images[size] = draw_icon(size)
         path = os.path.join(OUT_DIR, f"tracker-{size}.png")
-        draw_icon(size).save(path)
+        images[size].save(path)
         print(f"wrote {path}")
+
+    ico_path = os.path.join(OUT_DIR, "tracker.ico")
+    images[512].save(
+        ico_path,
+        format="ICO",
+        sizes=[(16, 16), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)],
+    )
+    print(f"wrote {ico_path}")
 
 
 if __name__ == "__main__":
