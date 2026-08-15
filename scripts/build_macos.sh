@@ -35,7 +35,7 @@ mkdir -p "$DIST_DIR"
   --distpath "$DIST_DIR" \
   --workpath "$BUILD_DIR" \
   --specpath "$BUILD_DIR" \
-  --add-data "sample.json:." \
+  --add-data "$ROOT/sample.json:." \
   "$ROOT/run.py"
 
 APP_BUNDLE="$DIST_DIR/$APP_NAME.app"
