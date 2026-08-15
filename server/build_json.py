@@ -18,7 +18,7 @@ from scrape_ttfi import scrape as scrape_ttfi
 HOME = {"label": "Bengaluru, India", "lat": 12.9716, "lng": 77.5946}
 
 # Only keep tournaments within this many km of home.
-RADIUS_KM = 200.0
+RADIUS_KM = 35.0
 
 IST = timezone(timedelta(hours=5, minutes=30))
 
