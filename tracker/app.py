@@ -8,6 +8,7 @@ import platform
 import sys
 import threading
 import tkinter as tk
+import webbrowser
 from tkinter import ttk, messagebox
 from urllib.error import URLError
 from urllib.request import urlopen
@@ -17,6 +18,19 @@ DEFAULT_URL = "http://pi-bookworm.local/tournaments.json"
 SPORTS = {"chess": "Chess"}
 TIME_CONTROLS = ["classical", "rapid", "blitz", "bullet"]
 FILTER_SORTS = {"Start date": "start_date", "Distance": "distance_km"}
+
+BG = "#eef1f5"
+SURFACE = "#ffffff"
+BORDER = "#d9dee6"
+TEXT = "#1f2937"
+MUTED = "#6b7280"
+ACCENT = "#2563eb"
+ACCENT_DARK = "#1d4ed8"
+ACCENT_SOFT = "#dbeafe"
+HEADER_BG = "#f3f5f8"
+ROW_ODD = "#ffffff"
+ROW_EVEN = "#f2f6fb"
+FONT = "Helvetica"
 
 
 def config_dir():
@@ -63,12 +77,80 @@ def format_date(date_text):
         return date_text
 
 
+def apply_style(root):
+    style = ttk.Style(root)
+    try:
+        style.theme_use("clam")
+    except tk.TclError:
+        pass
+
+    style.configure(".", font=(FONT, 10), background=BG, foreground=TEXT)
+    style.configure("TFrame", background=BG)
+    style.configure("Bar.TFrame", background=SURFACE)
+    style.configure("TLabel", background=BG, foreground=TEXT)
+    style.configure("Bar.TLabel", background=SURFACE, foreground=MUTED)
+    style.configure("Title.TLabel", background=SURFACE, foreground=TEXT,
+                    font=(FONT, 17, "bold"))
+    style.configure("Sub.TLabel", background=SURFACE, foreground=MUTED,
+                    font=(FONT, 10))
+    style.configure("Status.TLabel", background=SURFACE, foreground=MUTED)
+
+    style.configure("Accent.TButton", background=ACCENT, foreground="#ffffff",
+                    font=(FONT, 10, "bold"), padding=(18, 8), borderwidth=0,
+                    focuscolor=ACCENT)
+    style.map("Accent.TButton",
+              background=[("active", ACCENT_DARK), ("pressed", ACCENT_DARK),
+                          ("disabled", MUTED)])
+    style.configure("Soft.TButton", background=SURFACE, foreground=TEXT,
+                    font=(FONT, 10), padding=(14, 8), borderwidth=1,
+                    bordercolor=BORDER, focuscolor=SURFACE)
+    style.map("Soft.TButton",
+              background=[("active", "#f8fafc"), ("pressed", "#eef2f7")],
+              bordercolor=[("active", ACCENT)])
+
+    style.configure("TEntry", fieldbackground=SURFACE, bordercolor=BORDER,
+                    lightcolor=SURFACE, darkcolor=SURFACE, padding=7,
+                    insertcolor=TEXT, foreground=TEXT)
+    style.map("TEntry", bordercolor=[("focus", ACCENT)])
+
+    style.configure("TCombobox", fieldbackground=SURFACE, background=SURFACE,
+                    foreground=TEXT, bordercolor=BORDER, lightcolor=SURFACE,
+                    darkcolor=SURFACE, arrowcolor=ACCENT, padding=7)
+    style.map("TCombobox",
+              fieldbackground=[("readonly", SURFACE)],
+              bordercolor=[("focus", ACCENT)])
+
+    style.configure("Treeview", background=ROW_ODD, fieldbackground=ROW_ODD,
+                    foreground=TEXT, borderwidth=0, relief="flat",
+                    rowheight=30)
+    style.map("Treeview",
+              background=[("selected", ACCENT)],
+              foreground=[("selected", "#ffffff")])
+    style.configure("Treeview.Heading", background=HEADER_BG, foreground=TEXT,
+                    font=(FONT, 10, "bold"), padding=(8, 9), relief="flat",
+                    borderwidth=0)
+    style.map("Treeview.Heading", background=[("active", "#e8edf3")])
+
+    style.configure("Vertical.TScrollbar", background="#cbd5e1",
+                    troughcolor=BG, bordercolor=BG, arrowcolor=MUTED,
+                    relief="flat", borderwidth=0)
+    style.map("Vertical.TScrollbar", background=[("active", ACCENT)])
+
+
+def divider(parent):
+    frame = tk.Frame(parent, height=1, bg=BORDER)
+    frame.pack(fill="x")
+    return frame
+
+
 class TrackerApp:
     def __init__(self, root):
         self.root = root
         root.title(APP_NAME)
-        root.geometry("980x560")
-        root.minsize(760, 420)
+        root.geometry("1040x620")
+        root.minsize(820, 460)
+        root.configure(bg=BG)
+        apply_style(root)
 
         self.url_var = tk.StringVar(value=load_config())
         self.sport_var = tk.StringVar(value="All")
@@ -79,6 +161,7 @@ class TrackerApp:
         self.raw_tournaments = []
         self.feed_meta = {}
 
+        self._build_header()
         self._build_toolbar()
         self._build_table()
         self._build_statusbar()
@@ -89,41 +172,38 @@ class TrackerApp:
     def _on_filter_change(self, *_args):
         self.refresh_view()
 
+    def _build_header(self):
+        header = ttk.Frame(self.root, style="Bar.TFrame", padding=(16, 14, 16, 12))
+        header.pack(fill="x")
+        ttk.Label(header, text=APP_NAME, style="Title.TLabel").pack(anchor="w")
+        ttk.Label(header, text="Chess tournaments near you — FIDE & non-FIDE",
+                  style="Sub.TLabel").pack(anchor="w", pady=(2, 0))
+        divider(self.root)
+
     def _build_toolbar(self):
-        bar = ttk.Frame(self.root, padding=(10, 8))
+        bar = ttk.Frame(self.root, style="Bar.TFrame", padding=(16, 10))
         bar.pack(fill="x")
+        ttk.Label(bar, text="Server URL", style="Bar.TLabel").pack(side="left")
+        entry = ttk.Entry(bar, textvariable=self.url_var, width=46)
+        entry.pack(side="left", padx=(8, 8))
+        ttk.Button(bar, text="Refresh", style="Accent.TButton",
+                   command=self.refresh_feed).pack(side="left")
+        ttk.Button(bar, text="Load sample", style="Soft.TButton",
+                   command=self.load_sample).pack(side="left", padx=(8, 0))
 
-        ttk.Label(bar, text="Server URL").pack(side="left")
-        entry = ttk.Entry(bar, textvariable=self.url_var, width=44)
-        entry.pack(side="left", padx=(6, 6))
-
-        ttk.Button(bar, text="Refresh", command=self.refresh_feed).pack(side="left")
-        ttk.Button(bar, text="Load sample", command=self.load_sample).pack(side="left", padx=(6, 0))
-
-        filters = ttk.Frame(self.root, padding=(10, 0, 10, 6))
-        filters.pack(fill="x")
-        self._filter_row(
-            filters, "Sport", self.sport_var,
-            ["All", "Chess"],
-        )
-        self._filter_row(
-            filters, "FIDE", self.fide_var,
-            ["All", "FIDE", "Non-FIDE"],
-        )
-        self._filter_row(
-            filters, "Time control", self.tc_var,
-            ["All"] + [tc.capitalize() for tc in TIME_CONTROLS],
-        )
-        self._filter_row(
-            filters, "Sort by", self.sort_var,
-            list(FILTER_SORTS),
-        )
+        filters = ttk.Frame(bar, style="Bar.TFrame")
+        filters.pack(side="right")
+        self._filter_row(filters, "Sport", self.sport_var, ["All", "Chess"])
+        self._filter_row(filters, "FIDE", self.fide_var, ["All", "FIDE", "Non-FIDE"])
+        self._filter_row(filters, "Time control", self.tc_var,
+                         ["All"] + [tc.capitalize() for tc in TIME_CONTROLS])
+        self._filter_row(filters, "Sort by", self.sort_var, list(FILTER_SORTS))
+        divider(self.root)
 
     def _filter_row(self, parent, label, variable, options):
-        ttk.Label(parent, text=label).pack(side="left", padx=(14, 4))
-        combo = ttk.Combobox(parent, textvariable=variable, values=options,
-                             state="readonly", width=12)
-        combo.pack(side="left")
+        ttk.Label(parent, text=label, style="Bar.TLabel").pack(side="left", padx=(10, 4))
+        ttk.Combobox(parent, textvariable=variable, values=options,
+                     state="readonly", width=11).pack(side="left")
 
     def _build_table(self):
         columns = ("date", "sport", "name", "location", "dist", "fide", "tc", "category")
@@ -137,20 +217,24 @@ class TrackerApp:
             "tc": "Time Control",
             "category": "Type",
         }
-        wrap = tk.Frame(self.root)
-        wrap.pack(fill="both", expand=True, padx=10, pady=(0, 6))
+        wrap = tk.Frame(self.root, bg=BG)
+        wrap.pack(fill="both", expand=True, padx=16, pady=(12, 8))
 
-        self.table = ttk.Treeview(wrap, columns=columns, show="headings", selectmode="browse")
+        self.table = ttk.Treeview(wrap, columns=columns, show="headings",
+                                  selectmode="browse")
         for col in columns:
             self.table.heading(col, text=headings[col])
         self.table.column("date", width=80, anchor="center")
-        self.table.column("sport", width=100)
-        self.table.column("name", width=320)
-        self.table.column("location", width=150)
-        self.table.column("dist", width=60, anchor="center")
-        self.table.column("fide", width=50, anchor="center")
-        self.table.column("tc", width=80, anchor="center")
+        self.table.column("sport", width=80)
+        self.table.column("name", width=330)
+        self.table.column("location", width=170)
+        self.table.column("dist", width=64, anchor="center")
+        self.table.column("fide", width=56, anchor="center")
+        self.table.column("tc", width=90, anchor="center")
         self.table.column("category", width=110)
+
+        self.table.tag_configure("even", background=ROW_ODD)
+        self.table.tag_configure("odd", background=ROW_EVEN)
 
         scroll = ttk.Scrollbar(wrap, orient="vertical", command=self.table.yview)
         self.table.configure(yscrollcommand=scroll.set)
@@ -159,9 +243,11 @@ class TrackerApp:
         self.table.bind("<Double-1>", self.show_details)
 
     def _build_statusbar(self):
-        bar = ttk.Frame(self.root, padding=(10, 4))
+        bar = ttk.Frame(self.root, style="Bar.TFrame", padding=(16, 8))
         bar.pack(fill="x", side="bottom")
-        ttk.Label(bar, textvariable=self.status_var, anchor="w").pack(side="left")
+        divider(self.root)
+        ttk.Label(bar, textvariable=self.status_var, style="Status.TLabel",
+                  anchor="w").pack(fill="x")
 
     def refresh_feed(self):
         url = self.url_var.get().strip() or DEFAULT_URL
@@ -245,7 +331,7 @@ class TrackerApp:
         else:
             rows.sort(key=lambda r: (r[0], r[1]))
 
-        for _, _, t in rows:
+        for index, (_, _, t) in enumerate(rows):
             fide_text = "Yes" if t.get("fide_rated") is True else ("No" if t.get("fide_rated") is False else "—")
             tc_text = (t.get("time_control") or "—").capitalize() if t.get("sport") == "chess" else "—"
             dist = t.get("distance_km")
@@ -262,7 +348,7 @@ class TrackerApp:
                     tc_text,
                     t.get("category", "—"),
                 ),
-                tags=(str(id(t)),),
+                tags=(str(id(t)), "even" if index % 2 == 0 else "odd"),
             )
 
     def show_details(self, _event=None):
@@ -276,24 +362,48 @@ class TrackerApp:
             return
         t = match[0]
         home_label = self.feed_meta.get("home", {}).get("label", "home")
-        details = (
-            f"{t.get('name', '?')}\n\n"
-            f"Sport:        {SPORTS.get(t.get('sport', ''), '?')}\n"
-            f"Dates:        {t.get('start_date')} → {t.get('end_date') or 'TBC'}\n"
-            f"Location:     {t.get('location', '?')}\n"
-            f"Distance:     {t.get('distance_km')} km from {home_label}\n"
-            f"FIDE rated:   {t.get('fide_rated')}\n"
-            f"Time control: {t.get('time_control')}\n"
-            f"Type:         {t.get('category')}\n"
-            f"Source:       {t.get('source')}\n"
-            f"Link:         {t.get('link')}"
-        )
-        messagebox.showinfo(APP_NAME, details)
+        dist = t.get("distance_km")
+        dist_text = f"{dist} km from {home_label}" if isinstance(dist, (int, float)) else "—"
+        lines = [
+            t.get("name", "?"),
+            "",
+            f"Sport        {SPORTS.get(t.get('sport', ''), '?')}",
+            f"Dates        {t.get('start_date')} → {t.get('end_date') or 'TBC'}",
+            f"Location     {t.get('location', '?')}",
+            f"Distance     {dist_text}",
+            f"FIDE rated   {t.get('fide_rated')}",
+            f"Time control {t.get('time_control')}",
+            f"Type         {t.get('category')}",
+            f"Source       {t.get('source')}",
+        ]
+
+        win = tk.Toplevel(self.root)
+        win.title(APP_NAME)
+        win.configure(bg=SURFACE)
+        win.resizable(True, True)
+        win.transient(self.root)
+
+        text = tk.Text(win, wrap="word", width=66, height=13,
+                       bg=SURFACE, fg=TEXT, relief="flat", padx=16, pady=14,
+                       font=(FONT, 10), insertbackground=TEXT)
+        text.pack(fill="both", expand=True)
+        text.insert("1.0", "\n".join(lines))
+        if (t.get("link") or "").startswith("http"):
+            text.insert("end", "\n\nLink         " + t["link"])
+        text.configure(state="disabled")
+
+        buttons = ttk.Frame(win, style="Bar.TFrame", padding=(12, 8, 12, 12))
+        buttons.pack(fill="x")
+        if (t.get("link") or "").startswith("http"):
+            ttk.Button(buttons, text="Open link", style="Soft.TButton",
+                       command=lambda: webbrowser.open(t["link"])).pack(side="right")
+        ttk.Button(buttons, text="Close", style="Accent.TButton",
+                   command=win.destroy).pack(side="right", padx=(0, 8))
 
 
 def main():
     root = tk.Tk()
-    app = TrackerApp(root)
+    TrackerApp(root)
     root.mainloop()
 
 

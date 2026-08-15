@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Build tracker.app and wrap it in a .dmg for macOS.
-# Intended to run on a macOS GitHub Actions runner (macos-13) or a Mac.
+# Intended to run on a macOS GitHub Actions runner (macos-15-intel) or a Mac.
 set -euo pipefail
 
 APP_NAME="tracker"
@@ -26,7 +26,20 @@ echo "==> Installing PyInstaller"
 
 echo "==> Bundling .app"
 rm -rf "$BUILD_DIR" "$DIST_DIR"
-mkdir -p "$DIST_DIR"
+mkdir -p "$BUILD_DIR" "$DIST_DIR"
+
+echo "==> Making app icon (.icns)"
+ICONSET="$BUILD_DIR/icon.iconset"
+mkdir -p "$ICONSET"
+for s in 16 32 128 256 512; do
+  sips -z "$s" "$s" "$ROOT/scripts/icons/tracker-512.png" \
+    --out "$ICONSET/icon_${s}x${s}.png" >/dev/null
+  s2=$((s * 2))
+  sips -z "$s2" "$s2" "$ROOT/scripts/icons/tracker-512.png" \
+    --out "$ICONSET/icon_${s}x${s}@2x.png" >/dev/null
+done
+iconutil -c icns "$ICONSET" -o "$BUILD_DIR/tracker.icns"
+
 "$PYTHON" -m PyInstaller \
   --noconfirm \
   --clean \
@@ -36,6 +49,7 @@ mkdir -p "$DIST_DIR"
   --workpath "$BUILD_DIR" \
   --specpath "$BUILD_DIR" \
   --add-data "$ROOT/sample.json:." \
+  --icon "$BUILD_DIR/tracker.icns" \
   "$ROOT/run.py"
 
 APP_BUNDLE="$DIST_DIR/$APP_NAME.app"
