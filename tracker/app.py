@@ -352,24 +352,32 @@ class TrackerApp:
 
     # ---------- UI ----------
 
-    def _icon_path(self):
+    _LOGO_SIZES = (512, 256, 128, 64, 48, 40, 32, 16)
+
+    def _icon_path(self, target):
+        chosen = next((s for s in reversed(self._LOGO_SIZES) if s >= target), 512)
         if getattr(sys, "_MEIPASS", None):
-            return os.path.join(sys._MEIPASS, "tracker-512.png")
-        path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-                            "scripts", "icons", "tracker-512.png")
-        return path if os.path.exists(path) else None
+            for name in (f"tracker-{chosen}.png", "tracker-512.png"):
+                path = os.path.join(sys._MEIPASS, name)
+                if os.path.exists(path):
+                    return path
+            return None
+        base = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                            "scripts", "icons")
+        for name in (f"tracker-{chosen}.png", "tracker-512.png"):
+            path = os.path.join(base, name)
+            if os.path.exists(path):
+                return path
+        return None
 
     def _logo_photo(self, root, target):
-        path = self._icon_path()
+        path = self._icon_path(target)
         if not path:
             return None
         try:
-            image = tk.PhotoImage(file=path)
+            return tk.PhotoImage(file=path)
         except tk.TclError:
             return None
-        if image.width() > target * 2:
-            image = image.subsample(image.width() // target)
-        return image
 
     def _set_window_icon(self, root):
         image = self._logo_photo(root, 128)
