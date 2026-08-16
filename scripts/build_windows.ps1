@@ -62,6 +62,20 @@ Write-Host "==> Bundling with PyInstaller"
 Remove-Item -Recurse -Force $BUILD, $DIST -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Force -Path $DIST | Out-Null
 python -m PyInstaller @PYARGS
+python -m PyInstaller `
+  --noconfirm `
+  --clean `
+  --windowed `
+  --name $APP_NAME `
+  --distpath $DIST `
+  --workpath $BUILD `
+  --specpath $BUILD `
+  --icon $ICON `
+  --add-data "$ROOT\sample.json;." `
+  --add-data "$ROOT\scripts\icons\tracker-512.png;." `
+  --add-data "$ROOT\scripts\icons\tracker-128.png;." `
+  --add-data "$ROOT\scripts\icons\tracker-40.png;." `
+  "$ROOT\run.py"
 
 Write-Host "==> Zipping bundle"
 $ZIP = Join-Path $DIST "${APP_NAME}-${Version}-windows-x86_64.zip"
