@@ -402,17 +402,30 @@ class TrackerApp:
         self._build_statusbar(main)
 
     def _nav(self, parent, text, command, active=False):
+        # macOS Tk ignores `bg` on native tk.Button (renders white), so the
+        # sidebar uses label-styled buttons, which honor colors everywhere.
         bg = LIGHT_BLUE_BG if active else SIDEBAR_BG
         fg = BLUE_DARK if active else "#e8effa"
+        hover_bg = LIGHT_BLUE if active else SIDEBAR_HOVER
+        hover_fg = BLUE_DARK if active else "#ffffff"
         font = (FONT, 11, "bold") if active else (FONT, 11)
-        button = tk.Button(parent, text=text, command=command, bg=bg, fg=fg,
-                           activebackground=bg, activeforeground=fg,
-                           relief="flat", bd=0, anchor="w", padx=20, pady=10,
-                           font=font, cursor="hand2")
-        button.pack(fill="x")
-        if not active:
-            button.configure(activebackground=SIDEBAR_HOVER, activeforeground="#ffffff")
-        return button
+        label = tk.Label(parent, text=text, bg=bg, fg=fg, font=font,
+                         anchor="w", padx=20, pady=10, cursor="hand2")
+        label.pack(fill="x")
+        label.bind("<Button-1>", lambda _e, c=command: c())
+        label.bind("<Enter>", lambda _e, l=label: l.configure(bg=hover_bg, fg=hover_fg))
+        label.bind("<Leave>", lambda _e, l=label: l.configure(bg=bg, fg=fg))
+        return label
+
+    def _sidebar_button(self, parent, text, command, bg, fg, hover_bg, font,
+                        padx_left=0):
+        label = tk.Label(parent, text=text, bg=bg, fg=fg, font=font,
+                         anchor="center", padx=12, pady=8, cursor="hand2")
+        label.pack(side="left", padx=(padx_left, 0), expand=True, fill="x")
+        label.bind("<Button-1>", lambda _e, c=command: c())
+        label.bind("<Enter>", lambda _e, l=label: l.configure(bg=hover_bg))
+        label.bind("<Leave>", lambda _e, l=label: l.configure(bg=bg))
+        return label
 
     def _build_sidebar(self):
         sidebar = tk.Frame(self.root, bg=SIDEBAR_BG, width=212)
@@ -471,17 +484,11 @@ class TrackerApp:
 
         buttons = tk.Frame(feed, bg=SIDEBAR_BG)
         buttons.pack(fill="x", pady=(2, 0))
-        tk.Button(buttons, text="Refresh", command=self.refresh_feed,
-                  bg=BLUE, fg="#ffffff", activebackground=BLUE_DARK,
-                  activeforeground="#ffffff", relief="flat", bd=0,
-                  padx=12, pady=8, font=(FONT, 10, "bold"),
-                  cursor="hand2").pack(side="left", expand=True, fill="x")
-        tk.Button(buttons, text="Load sample", command=self.load_sample,
-                  bg=SIDEBAR_HOVER, fg="#e8effa", activebackground="#37618f",
-                  activeforeground="#ffffff", relief="flat", bd=0,
-                  padx=12, pady=8, font=(FONT, 10),
-                  cursor="hand2").pack(side="left", padx=(8, 0), expand=True,
-                                       fill="x")
+        self._sidebar_button(buttons, "Refresh", self.refresh_feed,
+                             BLUE, "#ffffff", BLUE_DARK, (FONT, 10, "bold"))
+        self._sidebar_button(buttons, "Load sample", self.load_sample,
+                             SIDEBAR_HOVER, "#e8effa", "#37618f", (FONT, 10),
+                             padx_left=8)
 
     def _toggle_fullscreen(self, _event=None):
         try:
