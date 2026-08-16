@@ -29,6 +29,7 @@ python -m PyInstaller `
   --specpath $BUILD `
   --icon $ICON `
   --add-data "$ROOT\sample.json;." `
+  --add-data "$ROOT\scripts\icons\tracker-512.png;." `
   "$ROOT\run.py"
 
 Write-Host "==> Zipping bundle"

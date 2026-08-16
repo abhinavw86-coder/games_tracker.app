@@ -1,15 +1,17 @@
 #!/usr/bin/env python3
-"""Generate the tracker.app icon: a white chess pawn on a rounded navy square.
+"""Generate the tracker.app icon: a blue pawn on a rounded pastel-glass tile
+(light blue → soft pink gradient, white glass sheen, pink accent dot).
 Writes PNGs in several sizes into scripts/icons/."""
 
 import os
 from PIL import Image, ImageDraw
 
 SIZES = [512, 256, 128, 64, 48, 32, 16]
-BG_TOP = (37, 99, 235)
-BG_BOTTOM = (23, 37, 84)
-PAWN = (248, 250, 252)
-PAWN_SHADOW = (203, 213, 225)
+BG_TOP = (157, 198, 246)      # light blue
+BG_BOTTOM = (246, 186, 213)   # soft pink
+PAWN = (37, 99, 235)          # blue
+PAWN_HI = (147, 197, 253)     # light blue highlight
+PINK_ACCENT = (236, 72, 153)  # pink
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT_DIR = os.path.join(HERE, "icons")
 
@@ -31,18 +33,24 @@ def pawn_geometry(size):
         return [(x * s, y * s) for x, y in points]
 
     pieces = []
-
-    # base plate (bottom ellipse)
     pieces.append(("ellipse", scale([(136, 372), (376, 436)]), PAWN))
-    # collar
     pieces.append(("ellipse", scale([(196, 205), (316, 258)]), PAWN))
-    # body (trapezoid)
     pieces.append(("polygon", scale([(205, 252), (307, 252), (336, 352), (176, 352)]), PAWN))
-    # head
     pieces.append(("ellipse", scale([(196, 92), (316, 212)]), PAWN))
-    # highlight on head
-    pieces.append(("ellipse", scale([(224, 118), (272, 166)]), PAWN_SHADOW))
+    pieces.append(("ellipse", scale([(224, 118), (272, 166)]), PAWN_HI))
     return pieces
+
+
+def glass_sheen(size):
+    """A semi-transparent white swoosh across the top for the frosted look."""
+    sheen = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(sheen)
+    s = size / 512.0
+    draw.ellipse([int(-60 * s), int(-40 * s), int(330 * s), int(160 * s)],
+                 fill=(255, 255, 255, 70))
+    draw.ellipse([int(-90 * s), int(-80 * s), int(560 * s), int(110 * s)],
+                 fill=(255, 255, 255, 40))
+    return sheen
 
 
 def draw_icon(size):
@@ -50,15 +58,27 @@ def draw_icon(size):
     mask = Image.new("L", (size, size), 0)
     mdraw = ImageDraw.Draw(mask)
     mdraw.rounded_rectangle([0, 0, size, size], radius=round(size * 0.22), fill=255)
+
     out = Image.new("RGB", (size, size), BG_BOTTOM)
     out.paste(image, (0, 0), mask)
-    draw = ImageDraw.Draw(out)
 
+    sheen = glass_sheen(size)
+    out_rgba = out.convert("RGBA")
+    out_rgba = Image.alpha_composite(out_rgba, sheen)
+    out = out_rgba.convert("RGB")
+    out.paste(image, (0, 0), mask)
+
+    draw = ImageDraw.Draw(out)
     for kind, points, fill in pawn_geometry(size):
         if kind == "ellipse":
             draw.ellipse(points, fill=fill)
         else:
             draw.polygon(points, fill=fill)
+
+    s = size / 512.0
+    r = int(26 * s)
+    cx, cy = 404 * s, 396 * s
+    draw.ellipse([cx - r, cy - r, cx + r, cy + r], fill=PINK_ACCENT)
     return out
 
 

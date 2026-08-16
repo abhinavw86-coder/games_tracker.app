@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 """Build tournaments.json: merge scraped events, geocode, compute distance
-from home, filter by radius, and write the JSON the Mac app reads.
+from home, add state + registration status, filter (radius or state/city),
+enrich with venue details, and write the JSON the app reads.
 """
 
 import argparse
 import json
 import math
 import sys
-from datetime import datetime, timezone, timedelta
+from datetime import date, datetime, timezone, timedelta
 
 from geocode import Geocoder
 from scrape_chess import scrape as scrape_chess
@@ -18,10 +19,64 @@ from venue import enrich_all
 # your own area before deploying (e.g. your city or suburb).
 HOME = {"label": "Bengaluru, India", "lat": 12.9716, "lng": 77.5946}
 
-# Only keep tournaments within this many km of home.
+# Only keep tournaments within this many km of home (used unless --state,
+# --city or --no-radius is given).
 RADIUS_KM = 35.0
 
 IST = timezone(timedelta(hours=5, minutes=30))
+
+# City -> state. AICF's all-events page only lists the host city.
+CITY_STATE = {
+    "agra": "Uttar Pradesh", "ahmedabad": "Gujarat", "ajmer": "Rajasthan",
+    "amritsar": "Punjab", "aurangabad": "Maharashtra", "bangalore": "Karnataka",
+    "bengaluru": "Karnataka",
+    "bhopal": "Madhya Pradesh", "bhubaneswar": "Odisha", "bilaspur": "Chhattisgarh",
+    "chandigarh": "Chandigarh", "chennai": "Tamil Nadu", "coimbatore": "Tamil Nadu",
+    "dehradun": "Uttarakhand", "delhi": "Delhi", "new delhi": "Delhi",
+    "dharwad": "Karnataka", "dindigul": "Tamil Nadu", "goa": "Goa",
+    "guwahati": "Assam", "gwalior": "Madhya Pradesh", "hubballi": "Karnataka",
+    "hyderabad": "Telangana", "indore": "Madhya Pradesh", "jaipur": "Rajasthan",
+    "jammu": "Jammu and Kashmir", "jodhpur": "Rajasthan", "kanpur": "Uttar Pradesh",
+    "kochi": "Kerala", "kolkata": "West Bengal", "kottayam": "Kerala",
+    "kozhikode": "Kerala", "lucknow": "Uttar Pradesh", "madurai": "Tamil Nadu",
+    "mangaluru": "Karnataka", "meerut": "Uttar Pradesh", "mumbai": "Maharashtra",
+    "mysuru": "Karnataka", "mysore": "Karnataka", "nagpur": "Maharashtra",
+    "nashik": "Maharashtra", "panaji": "Goa", "patna": "Bihar",
+    "pune": "Maharashtra", "rajkot": "Gujarat", "ranchi": "Jharkhand",
+    "salem": "Tamil Nadu", "shimla": "Himachal Pradesh", "srinagar": "Jammu and Kashmir",
+    "surat": "Gujarat", "thane": "Maharashtra", "thiruvananthapuram": "Kerala",
+    "tiruchirappalli": "Tamil Nadu", "trichy": "Tamil Nadu", "tirunelveli": "Tamil Nadu",
+    "udaipur": "Rajasthan", "vadodara": "Gujarat", "varanasi": "Uttar Pradesh",
+    "vijayawada": "Andhra Pradesh", "visakhapatnam": "Andhra Pradesh",
+}
+
+
+def state_of(location):
+    if not location:
+        return None
+    low = location.strip().lower()
+    if low in CITY_STATE:
+        return CITY_STATE[low]
+    for city, state in CITY_STATE.items():
+        if city in low:
+            return state
+    return None
+
+
+def event_status(event, today):
+    deadline = event.get("reg_deadline")
+    if not deadline:
+        return None
+    try:
+        deadline_date = date.fromisoformat(deadline)
+    except ValueError:
+        return None
+    days = (deadline_date - today).days
+    if days < 0:
+        return "closed"
+    if days <= 7:
+        return "closing soon"
+    return "open"
 
 
 def haversine_km(lat1, lng1, lat2, lng2):
@@ -37,6 +92,9 @@ def main():
     parser = argparse.ArgumentParser(description="Build tournaments.json")
     parser.add_argument("--output", default="tournaments.json", help="output file (default: tournaments.json)")
     parser.add_argument("--skip-chessfee", action="store_true", help="skip the Chessfee scrape")
+    parser.add_argument("--state", help="keep only events in this state (ignores radius)")
+    parser.add_argument("--city", help="keep only events in this city (ignores radius)")
+    parser.add_argument("--no-radius", action="store_true", help="keep all geocodable events")
     args = parser.parse_args()
 
     print("Scraping chess (AICF) ...")
@@ -45,8 +103,10 @@ def main():
         print("Scraping chess (Chessfee) ...")
         events += scrape_chessfee()
 
+    for event in events:
+        event["state"] = state_of(event.get("location"))
+
     geocoder = Geocoder()
-    kept = 0
     skipped = 0
     for event in events:
         coords = geocoder.lookup(event["location"])
@@ -56,26 +116,45 @@ def main():
         event["lat"] = coords["lat"]
         event["lng"] = coords["lng"]
         event["distance_km"] = round(haversine_km(HOME["lat"], HOME["lng"], coords["lat"], coords["lng"]), 1)
-        if event["distance_km"] <= RADIUS_KM:
-            kept += 1
 
-    events = [e for e in events if "distance_km" in e and e["distance_km"] <= RADIUS_KM]
-    events.sort(key=lambda e: (e["start_date"], e["distance_km"]))
+    geocoded = [e for e in events if "distance_km" in e]
+    if args.state:
+        kept = [e for e in geocoded if e.get("state") == args.state]
+        mode = f"state {args.state}"
+    elif args.city:
+        kept = [e for e in geocoded if (e.get("location") or "").lower() == args.city.lower()]
+        mode = f"city {args.city}"
+    elif args.no_radius:
+        kept = geocoded
+        mode = "all states"
+    else:
+        kept = [e for e in geocoded if e["distance_km"] <= RADIUS_KM]
+        mode = f"{RADIUS_KM} km of {HOME['label']}"
 
-    print(f"Enriching {len(events)} in-radius events with venue addresses (prospectus PDFs) ...")
-    enrich_all(events)
+    kept.sort(key=lambda e: (e["start_date"], e["distance_km"]))
+
+    print(f"Enriching {len(kept)} events with venue details (prospectus PDFs) ...")
+    enrich_all(kept)
+
+    today = date.today()
+    for event in kept:
+        status = event_status(event, today)
+        if status:
+            event["event_status"] = status
+        else:
+            event.pop("event_status", None)
 
     payload = {
         "generated_at": datetime.now(IST).isoformat(timespec="seconds"),
         "home": HOME,
         "radius_km": RADIUS_KM,
-        "tournaments": events,
+        "tournaments": kept,
     }
 
     with open(args.output, "w", encoding="utf-8") as fh:
         json.dump(payload, fh, indent=2, ensure_ascii=False)
 
-    print(f"\n{len(events)} tournaments within {RADIUS_KM} km of {HOME['label']} "
+    print(f"\n{len(kept)} tournaments within {mode} "
           f"({skipped} events had no geocodable location)")
     print(f"Written to {args.output}")
 

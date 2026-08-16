@@ -6,6 +6,15 @@ serves them as JSON over nginx; the app fetches that JSON and shows everything:
 date, venue, distance, FIDE / non-FIDE status, and time control (classical /
 rapid / blitz / bullet).
 
+The app also has: a registration-deadline countdown (with an "open / closing
+soon / closed" status from each prospectus), entry fee and prize fund pulled out
+of the AICF prospectus PDFs, a per-state filter and an "only weekends" toggle,
+collapsible month grouping, a player profile (age / rating / budget / max
+distance) with a **Best pick** recommendation and a **For me** filter, a cost
+summary, a side-by-side **Compare** view, an offline cache (it keeps the last
+feed and shows an `● OFFLINE` banner), and an in-app badge when new tournaments
+appear.
+
 ```
 AICF (all-India official) ──┐
                             ├─► server/build_json.py ─► tournaments.json ─► nginx ─► tracker.app (macOS 12+)
@@ -25,7 +34,8 @@ Chessfee (registration portal) ─┘
 server/                  Raspberry Pi side
   scrape_chess.py        AICF chess scraper
   scrape_chessfee.py     Chessfee chess scraper (casual/children's events)
-  venue.py               extract real venue addresses from AICF prospectus PDFs
+  venue.py               extract venue address, last entry date, entry fee and
+                         prize fund from AICF prospectus PDFs
   build_json.py          merge + geocode + distance filter → tournaments.json
   geocode.py             OpenStreetMap Nominatim geocoder (cached)
   nginx.conf             nginx site config for the JSON feed
@@ -76,6 +86,12 @@ cd /opt/tracker
 .venv/bin/python build_json.py --output /var/www/tracker/tournaments.json
 ```
 
+Useful flags:
+
+- `--state "Tamil Nadu"` — keep only tournaments in that state (ignores radius)
+- `--city Chennai` — keep only tournaments in that city (ignores radius)
+- `--no-radius` — keep every geocodable tournament, all states
+
 The first run geocodes every city via OpenStreetMap (≈1 req/s, takes a few
 minutes). Results are cached in `server/.geocode_cache.json`, so later runs are
 fast and offline. Cities that can't be geocoded are skipped.
@@ -108,11 +124,20 @@ via Rosetta 2.
 1. Open the DMG, drag `tracker.app` into **Applications**.
 2. Right-click → Open the first time (it's unsigned, so Gatekeeper will warn).
 3. Enter the Pi's URL in the **Server URL** box and press **Refresh**.
-4. Filter by **Sport**, **FIDE**, **Time control**, and **Sort by** date or distance.
-   Double-click any row for full details (dates, distance, source, link).
+4. Filter by **FIDE**, **Time control**, **State**, **Upcoming** (default),
+   **Weekends only**, and **Sort by** date or distance. **For me** hides events
+   you can't enter (age-group or over budget); **Best pick** suggests the one
+   you'd enjoy most; select 2–3 rows and **Compare** shows them side by side.
+   Double-click any row for full details (dates, distance, venue, deadline,
+   entry fee, prize fund, source, link). Month headers collapse groups with a
+   single click.
 5. "Load sample" shows bundled example data so you can try it before the Pi is up.
+6. If the Pi is unreachable the app keeps showing the last fetched feed and marks
+   it **● OFFLINE**. Set your age, rating, budget and max distance via
+   **Profile** to power the recommendations.
 
-The URL is remembered between launches.
+The URL is remembered between launches, as are your filters, profile, and window
+size.
 
 ## 4. Linux packages (.deb and AppImage)
 
@@ -173,7 +198,12 @@ extinct, so "x86" = x86_64 here).
       "start_date": "2026-08-15",
       "end_date": "2026-08-15",
       "location": "Bengaluru",
+      "state": "Karnataka",
       "venue": "SDP Palace, Old Madras Rd, Sannatammanahalli, Karnataka 560049",
+      "reg_deadline": "2026-08-10",
+      "entry_fee": 1200,
+      "prize_fund": 100000,
+      "event_status": "closed",           // closed | closing soon | open
       "distance_km": 24.8,
       "fide_rated": true,
       "time_control": "rapid",           // classical | rapid | blitz | bullet

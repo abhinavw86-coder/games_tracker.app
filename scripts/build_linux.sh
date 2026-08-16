@@ -40,6 +40,7 @@ rm -rf "$DIST_DIR"
   --workpath "$BUILD_DIR" \
   --specpath "$BUILD_DIR" \
   --add-data "$ROOT/sample.json:." \
+  --add-data "$ROOT/scripts/icons/tracker-512.png:." \
   "$ROOT/run.py"
 
 BUNDLE="$DIST_DIR/$APP_NAME"

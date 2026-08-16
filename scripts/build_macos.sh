@@ -49,6 +49,7 @@ iconutil -c icns "$ICONSET" -o "$BUILD_DIR/tracker.icns"
   --workpath "$BUILD_DIR" \
   --specpath "$BUILD_DIR" \
   --add-data "$ROOT/sample.json:." \
+  --add-data "$ROOT/scripts/icons/tracker-512.png:." \
   --icon "$BUILD_DIR/tracker.icns" \
   "$ROOT/run.py"
 
