@@ -25,7 +25,7 @@ APP_NAME = "Tournament Tracker"
 DEFAULT_URL = "http://pi-bookworm.local/tournaments.json"
 TIME_CONTROLS = ["classical", "rapid", "blitz", "bullet"]
 FILTER_SORTS = {"Start date": "start_date", "Distance": "distance_km"}
-U10_RE = re.compile(r"\bu\s?[-–]?\s?10\b|\bunder\s?[-–]?\s?10\b", re.IGNORECASE)
+U9_RE = re.compile(r"\bu\s?[-–]?\s?9\b|\bunder\s?[-–]?\s?9\b", re.IGNORECASE)
 U_CAT_RE = re.compile(r"\b(?:u\s*[-–]?\s*(\d{1,2})|under\s*[-–]?\s*(\d{1,2}))\b",
                       re.IGNORECASE)
 WEEKEND_DAYS = {5, 6}
@@ -114,8 +114,8 @@ def parse_iso(date_text):
         return None
 
 
-def is_u10(tournament):
-    return bool(U10_RE.search(tournament.get("name") or ""))
+def is_u9(tournament):
+    return bool(U9_RE.search(tournament.get("name") or ""))
 
 
 def u_category(name):
@@ -554,7 +554,7 @@ class TrackerApp:
         return box
 
     def _build_table(self, parent):
-        columns = ("date", "name", "location", "due", "dist", "fide", "u10", "tc", "category")
+        columns = ("date", "name", "location", "due", "dist", "fide", "u9", "tc", "category")
         headings = {
             "date": "Start",
             "name": "Tournament",
@@ -562,7 +562,7 @@ class TrackerApp:
             "due": "Due",
             "dist": "Dist",
             "fide": "FIDE",
-            "u10": "U-10",
+            "u9": "U-9",
             "tc": "Time Control",
             "category": "Type",
         }
@@ -579,7 +579,7 @@ class TrackerApp:
         self.table.column("due", width=76, anchor="center")
         self.table.column("dist", width=58, anchor="center")
         self.table.column("fide", width=52, anchor="center")
-        self.table.column("u10", width=52, anchor="center")
+        self.table.column("u9", width=52, anchor="center")
         self.table.column("tc", width=88, anchor="center")
         self.table.column("category", width=100)
 
@@ -811,7 +811,7 @@ class TrackerApp:
                 countdown_text(t.get("start_date")),
                 dist_text,
                 fide_text,
-                "Yes" if is_u10(t) else "—",
+                "Yes" if is_u9(t) else "—",
                 tc_text,
                 t.get("category", "—"),
             ),
@@ -904,7 +904,7 @@ class TrackerApp:
         lines += [
             f"Distance     {dist_text}",
             f"FIDE rated   {t.get('fide_rated')}",
-            f"U-10 friendly {'Yes' if is_u10(t) else 'No'}",
+            f"U-9 friendly {'Yes' if is_u9(t) else 'No'}",
             f"Time control {t.get('time_control')}",
             f"Type         {t.get('category')}",
             f"Entry fee    {inr(t.get('entry_fee'))}",
@@ -1122,7 +1122,7 @@ class TrackerApp:
         if is_weekend_event(t):
             score += 5
             reasons.append("weekend")
-        if is_u10(t) and not (age and age <= 10):
+        if is_u9(t) and not (age and age <= 9):
             score -= 10
         return score, (reasons or ["no profile match yet"])
 
@@ -1141,7 +1141,7 @@ class TrackerApp:
             ("Distance", lambda t: f"{t.get('distance_km'):.0f} km"
              if isinstance(t.get("distance_km"), (int, float)) else "—"),
             ("FIDE rated", lambda t: t.get("fide_rated")),
-            ("U-10", lambda t: "Yes" if is_u10(t) else "No"),
+            ("U-9", lambda t: "Yes" if is_u9(t) else "No"),
             ("Time control", lambda t: t.get("time_control", "—")),
             ("Type", lambda t: t.get("category", "—")),
             ("Entry fee", lambda t: inr(t.get("entry_fee"))),
