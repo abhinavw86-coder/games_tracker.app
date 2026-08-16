@@ -179,7 +179,7 @@
     {
       "id": "local-46",
       "sport": "chess",
-      "name": "Bengaluru U-10 Rapid Chess Championship",
+      "name": "Bengaluru U-9 Rapid Chess Championship",
       "start_date": "2026-08-30",
       "end_date": "2026-08-30",
       "location": "Bengaluru",
@@ -187,7 +187,7 @@
       "venue": "Akshaya Niketan Hall, Jayanagar 5th Block, Bengaluru 560041",
       "fide_rated": false,
       "time_control": "rapid",
-      "category": "U-10",
+      "category": "U-9",
       "reg_deadline": "2026-08-26",
       "entry_fee": 400,
       "prize_fund": 20000,
