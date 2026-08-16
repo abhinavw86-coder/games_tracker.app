@@ -8,7 +8,7 @@ WEB_ROOT="/var/www/tracker"
 
 echo "==> Installing nginx"
 pkexec apt-get update
-pkexec apt-get install -y nginx
+pkexec apt-get install -y nginx poppler-utils
 
 echo "==> Copying tracker server to /opt/tracker"
 pkexec mkdir -p /opt/tracker

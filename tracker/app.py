@@ -169,6 +169,7 @@ class TrackerApp:
         self.status_var = tk.StringVar(value="Enter the Pi's URL and press Refresh")
         self.raw_tournaments = []
         self.feed_meta = {}
+        self._maps_after = None
 
         self._build_header()
         self._build_toolbar()
@@ -249,7 +250,7 @@ class TrackerApp:
         self.table.pack(side="left", fill="both", expand=True)
         scroll.pack(side="right", fill="y")
         self.table.bind("<Button-1>", self._on_location_click)
-        self.table.bind("<Double-1>", self.show_details)
+        self.table.bind("<Double-1>", self._on_location_double)
 
     def _build_statusbar(self):
         bar = ttk.Frame(self.root, style="Bar.TFrame", padding=(16, 8))
@@ -314,12 +315,23 @@ class TrackerApp:
             return
         item = self.table.item(row)
         tag = item["tags"][0] if item["tags"] else ""
-        match = [t for t in self.raw_tournaments if str(id(t)) == tag]
+        match = [t for t in self.raw_tournaments if f"t{id(t)}" == tag]
         if not match:
             return
-        location = (match[0].get("location") or "").strip()
-        if location:
-            webbrowser.open(maps_url(location))
+        location = (match[0].get("venue") or match[0].get("location") or "").strip()
+        if not location:
+            return
+        if self._maps_after is not None:
+            self.root.after_cancel(self._maps_after)
+        self._maps_after = self.root.after(
+            350, lambda: webbrowser.open(maps_url(location))
+        )
+
+    def _on_location_double(self, event):
+        if self._maps_after is not None:
+            self.root.after_cancel(self._maps_after)
+            self._maps_after = None
+        self.show_details(event)
 
     def refresh_view(self):
         for item in self.table.get_children():
@@ -360,14 +372,14 @@ class TrackerApp:
                 values=(
                     format_date(t.get("start_date")),
                     t.get("name", "?"),
-                    t.get("location", "?"),
+                    t.get("venue") or "-",
                     dist_text,
                     fide_text,
                     "Yes" if is_u10(t) else "—",
                     tc_text,
                     t.get("category", "—"),
                 ),
-                tags=(str(id(t)), "even" if index % 2 == 0 else "odd"),
+                tags=(f"t{id(t)}", "even" if index % 2 == 0 else "odd"),
             )
 
     def show_details(self, _event=None):
@@ -376,18 +388,23 @@ class TrackerApp:
             return
         item = self.table.item(selected[0])
         tag = item["tags"][0] if item["tags"] else ""
-        match = [t for t in self.raw_tournaments if str(id(t)) == tag]
+        match = [t for t in self.raw_tournaments if f"t{id(t)}" == tag]
         if not match:
             return
         t = match[0]
         home_label = self.feed_meta.get("home", {}).get("label", "home")
         dist = t.get("distance_km")
         dist_text = f"{dist} km from {home_label}" if isinstance(dist, (int, float)) else "—"
+        venue = t.get("venue")
         lines = [
             t.get("name", "?"),
             "",
             f"Dates        {t.get('start_date')} → {t.get('end_date') or 'TBC'}",
             f"Location     {t.get('location', '?')}",
+        ]
+        if venue and venue != t.get("location"):
+            lines.append(f"Venue        {venue}")
+        lines += [
             f"Distance     {dist_text}",
             f"FIDE rated   {t.get('fide_rated')}",
             f"U-10 friendly {'Yes' if is_u10(t) else 'No'}",

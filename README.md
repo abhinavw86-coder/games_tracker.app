@@ -25,6 +25,7 @@ Chessfee (registration portal) ─┘
 server/                  Raspberry Pi side
   scrape_chess.py        AICF chess scraper
   scrape_chessfee.py     Chessfee chess scraper (casual/children's events)
+  venue.py               extract real venue addresses from AICF prospectus PDFs
   build_json.py          merge + geocode + distance filter → tournaments.json
   geocode.py             OpenStreetMap Nominatim geocoder (cached)
   nginx.conf             nginx site config for the JSON feed
@@ -56,6 +57,8 @@ chmod +x install_nginx.sh
 This installs nginx, copies the server to `/opt/tracker`, builds the feed into
 `/var/www/tracker/tournaments.json`, reloads nginx, and sets up a **systemd
 timer** that runs the feed build at boot and every day at 05:00.
+(`poppler-utils` is installed for `pdftotext`, used to read venue addresses out
+of AICF prospectus PDFs.)
 
 Note the printed URL, e.g. `http://192.168.1.50/tournaments.json` (or a
 `*.local` hostname if your router does mDNS).
@@ -170,6 +173,7 @@ extinct, so "x86" = x86_64 here).
       "start_date": "2026-08-15",
       "end_date": "2026-08-15",
       "location": "Bengaluru",
+      "venue": "SDP Palace, Old Madras Rd, Sannatammanahalli, Karnataka 560049",
       "distance_km": 24.8,
       "fide_rated": true,
       "time_control": "rapid",           // classical | rapid | blitz | bullet

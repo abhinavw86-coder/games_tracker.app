@@ -12,6 +12,7 @@ from datetime import datetime, timezone, timedelta
 from geocode import Geocoder
 from scrape_chess import scrape as scrape_chess
 from scrape_chessfee import scrape as scrape_chessfee
+from venue import enrich_all
 
 # Tournaments are filtered by distance from a home location. Set these to
 # your own area before deploying (e.g. your city or suburb).
@@ -60,6 +61,9 @@ def main():
 
     events = [e for e in events if "distance_km" in e and e["distance_km"] <= RADIUS_KM]
     events.sort(key=lambda e: (e["start_date"], e["distance_km"]))
+
+    print(f"Enriching {len(events)} in-radius events with venue addresses (prospectus PDFs) ...")
+    enrich_all(events)
 
     payload = {
         "generated_at": datetime.now(IST).isoformat(timespec="seconds"),
