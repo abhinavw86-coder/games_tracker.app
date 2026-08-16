@@ -5,19 +5,21 @@ PyInstaller."""
 import json
 import os
 import platform
+import re
 import sys
 import threading
 import tkinter as tk
 import webbrowser
 from tkinter import ttk, messagebox
 from urllib.error import URLError
+from urllib.parse import quote
 from urllib.request import urlopen
 
 APP_NAME = "Tournament Tracker"
 DEFAULT_URL = "http://pi-bookworm.local/tournaments.json"
-SPORTS = {"chess": "Chess"}
 TIME_CONTROLS = ["classical", "rapid", "blitz", "bullet"]
 FILTER_SORTS = {"Start date": "start_date", "Distance": "distance_km"}
+U10_RE = re.compile(r"\bu\s?[-–]?\s?10\b|\bunder\s?[-–]?\s?10\b", re.IGNORECASE)
 
 BG = "#eef1f5"
 SURFACE = "#ffffff"
@@ -75,6 +77,14 @@ def format_date(date_text):
         return f"{day:02d}-{month:02d}-{year}"
     except (ValueError, IndexError):
         return date_text
+
+
+def is_u10(tournament):
+    return bool(U10_RE.search(tournament.get("name") or ""))
+
+
+def maps_url(location):
+    return "https://www.google.com/maps/search/?api=1&query=" + quote(location)
 
 
 def apply_style(root):
@@ -153,7 +163,6 @@ class TrackerApp:
         apply_style(root)
 
         self.url_var = tk.StringVar(value=load_config())
-        self.sport_var = tk.StringVar(value="All")
         self.fide_var = tk.StringVar(value="All")
         self.tc_var = tk.StringVar(value="All")
         self.sort_var = tk.StringVar(value="Start date")
@@ -166,7 +175,7 @@ class TrackerApp:
         self._build_table()
         self._build_statusbar()
 
-        for var in (self.sport_var, self.fide_var, self.tc_var, self.sort_var):
+        for var in (self.fide_var, self.tc_var, self.sort_var):
             var.trace_add("write", self._on_filter_change)
 
     def _on_filter_change(self, *_args):
@@ -193,7 +202,6 @@ class TrackerApp:
 
         filters = ttk.Frame(bar, style="Bar.TFrame")
         filters.pack(side="right")
-        self._filter_row(filters, "Sport", self.sport_var, ["All", "Chess"])
         self._filter_row(filters, "FIDE", self.fide_var, ["All", "FIDE", "Non-FIDE"])
         self._filter_row(filters, "Time control", self.tc_var,
                          ["All"] + [tc.capitalize() for tc in TIME_CONTROLS])
@@ -206,14 +214,14 @@ class TrackerApp:
                      state="readonly", width=11).pack(side="left")
 
     def _build_table(self):
-        columns = ("date", "sport", "name", "location", "dist", "fide", "tc", "category")
+        columns = ("date", "name", "location", "dist", "fide", "u10", "tc", "category")
         headings = {
             "date": "Start",
-            "sport": "Sport",
             "name": "Tournament",
             "location": "Location",
             "dist": "Dist",
             "fide": "FIDE",
+            "u10": "U-10",
             "tc": "Time Control",
             "category": "Type",
         }
@@ -225,11 +233,11 @@ class TrackerApp:
         for col in columns:
             self.table.heading(col, text=headings[col])
         self.table.column("date", width=80, anchor="center")
-        self.table.column("sport", width=80)
-        self.table.column("name", width=330)
+        self.table.column("name", width=340)
         self.table.column("location", width=170)
         self.table.column("dist", width=64, anchor="center")
         self.table.column("fide", width=56, anchor="center")
+        self.table.column("u10", width=56, anchor="center")
         self.table.column("tc", width=90, anchor="center")
         self.table.column("category", width=110)
 
@@ -240,6 +248,7 @@ class TrackerApp:
         self.table.configure(yscrollcommand=scroll.set)
         self.table.pack(side="left", fill="both", expand=True)
         scroll.pack(side="right", fill="y")
+        self.table.bind("<Button-1>", self._on_location_click)
         self.table.bind("<Double-1>", self.show_details)
 
     def _build_statusbar(self):
@@ -299,27 +308,37 @@ class TrackerApp:
             return os.path.join(sys._MEIPASS, "sample.json")
         return os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "sample.json")
 
+    def _on_location_click(self, event):
+        row = self.table.identify_row(event.y)
+        if not row or self.table.identify_column(event.x) != "#3":
+            return
+        item = self.table.item(row)
+        tag = item["tags"][0] if item["tags"] else ""
+        match = [t for t in self.raw_tournaments if str(id(t)) == tag]
+        if not match:
+            return
+        location = (match[0].get("location") or "").strip()
+        if location:
+            webbrowser.open(maps_url(location))
+
     def refresh_view(self):
         for item in self.table.get_children():
             self.table.delete(item)
 
-        sport = self.sport_var.get()
         fide = self.fide_var.get()
         tc = self.tc_var.get().lower()
         sort_key = FILTER_SORTS.get(self.sort_var.get(), "start_date")
 
         rows = []
         for t in self.raw_tournaments:
-            sport_id = t.get("sport", "")
-            if sport != "All" and sport != SPORTS.get(sport_id, sport_id):
+            if t.get("sport") != "chess":
                 continue
-            if sport_id == "chess":
-                if fide == "FIDE" and not t.get("fide_rated"):
-                    continue
-                if fide == "Non-FIDE" and t.get("fide_rated"):
-                    continue
-                if tc != "all" and (t.get("time_control") or "classical").lower() != tc:
-                    continue
+            if fide == "FIDE" and not t.get("fide_rated"):
+                continue
+            if fide == "Non-FIDE" and t.get("fide_rated"):
+                continue
+            if tc != "all" and (t.get("time_control") or "classical").lower() != tc:
+                continue
 
             start = t.get("start_date", "") or "9999-99-99"
             dist = t.get("distance_km")
@@ -333,18 +352,18 @@ class TrackerApp:
 
         for index, (_, _, t) in enumerate(rows):
             fide_text = "Yes" if t.get("fide_rated") is True else ("No" if t.get("fide_rated") is False else "—")
-            tc_text = (t.get("time_control") or "—").capitalize() if t.get("sport") == "chess" else "—"
+            tc_text = (t.get("time_control") or "—").capitalize()
             dist = t.get("distance_km")
             dist_text = f"{dist:.0f} km" if isinstance(dist, (int, float)) else "—"
             self.table.insert(
                 "", "end",
                 values=(
                     format_date(t.get("start_date")),
-                    SPORTS.get(t.get("sport", ""), t.get("sport", "?")),
                     t.get("name", "?"),
                     t.get("location", "?"),
                     dist_text,
                     fide_text,
+                    "Yes" if is_u10(t) else "—",
                     tc_text,
                     t.get("category", "—"),
                 ),
@@ -367,11 +386,11 @@ class TrackerApp:
         lines = [
             t.get("name", "?"),
             "",
-            f"Sport        {SPORTS.get(t.get('sport', ''), '?')}",
             f"Dates        {t.get('start_date')} → {t.get('end_date') or 'TBC'}",
             f"Location     {t.get('location', '?')}",
             f"Distance     {dist_text}",
             f"FIDE rated   {t.get('fide_rated')}",
+            f"U-10 friendly {'Yes' if is_u10(t) else 'No'}",
             f"Time control {t.get('time_control')}",
             f"Type         {t.get('category')}",
             f"Source       {t.get('source')}",

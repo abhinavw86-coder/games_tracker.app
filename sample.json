@@ -102,6 +102,22 @@
       "lat": 12.915,
       "lng": 77.683,
       "distance_km": 11.0
+    },
+    {
+      "id": "local-46",
+      "sport": "chess",
+      "name": "Bengaluru U-10 Rapid Chess Championship",
+      "start_date": "2026-08-30",
+      "end_date": "2026-08-30",
+      "location": "Bengaluru",
+      "fide_rated": false,
+      "time_control": "rapid",
+      "category": "U-10",
+      "link": "https://aicf.in/all-events/",
+      "source": "Chessfee",
+      "lat": 12.97679,
+      "lng": 77.59008,
+      "distance_km": 24.8
     }
   ]
 }
